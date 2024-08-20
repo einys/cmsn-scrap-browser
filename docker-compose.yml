@@ -1,0 +1,12 @@
+
+version: '3.8'
+services:
+  my-service:
+    image: my-image:latest
+    restart: on-failure
+    deploy: 
+      restart_policy:
+        condition: any  # 컨테이너가 어떤 이유로든 종료되었을 때 재시작
+        delay: 10s      # 재시작하기 전에 10초 대기
+        max_attempts: 5 # 최대 5번 재시작 시도
+        window: 120s    # 2분 동안 최대 5번 시도

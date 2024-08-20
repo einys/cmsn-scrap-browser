@@ -1,0 +1,40 @@
+FROM selenium/standalone-chromium:latest
+
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# 루트 사용자로 전환
+USER root
+
+# 필요한 패키지만 설치하고 캐시 정리
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-setuptools \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# 기존 pip 및 python 링크가 있을 경우 삭제하고 심볼릭 링크 생성
+RUN rm -f /usr/bin/python /usr/bin/pip && \
+    ln -s /usr/bin/python3 /usr/bin/python && \
+    ln -s /usr/bin/pip3 /usr/bin/pip
+
+RUN wget https://github.com/dreamshao/chromedriver/raw/main/126.0.6478.126%20chromedriver-linux64.zip \
+    && unzip "126.0.6478.126 chromedriver-linux64.zip" \
+    && mv chromedriver-linux64/chromedriver /usr/local/bin/ \
+    && chmod +x /usr/local/bin/chromedriver
+
+# requirements.txt 파일을 컨테이너에 복사하고, 필요한 패키지 설치
+COPY requirements.txt .
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
+
+
+# 애플리케이션 코드 복사
+COPY app.py .
+
+
+# 포트 설정
+EXPOSE 18081
+
+# Gunicorn을 사용해 Flask 애플리케이션 실행
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:18081", "app:app"]
