@@ -1,5 +1,6 @@
 import os
 import platform
+from time import sleep
 from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
@@ -9,25 +10,43 @@ from webdriver_manager.core.os_manager import OperationSystemManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 app = Flask(__name__)
 
 
-# Firefox 옵션 설정
+# Firefox 옵션 설정 초기화
 firefox_options = Options()
 
+logger.info(" 🌟 System info: " + platform.system() + " " + platform.machine()) 
 # Set the binary location
 if platform.system() == "Darwin":  # macOS
+    logger.info(" >> macOS system")
     firefox_options.binary_location = "/Applications/Firefox.app/Contents/MacOS/firefox"
 elif platform.system() == "Linux":  # Ubuntu or Linux-based Docker container
+    logger.info(" >> Linux system")
     firefox_options.binary_location = os.getenv("FIREFOX_BINARY_PATH", "/usr/bin/firefox")
+else :
+    logger.info(" >> Windows system")
+    firefox_options.binary_location = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
     
 firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
 
 os_manager = OperationSystemManager("linux_aarch64")
 # GeckoDriver 설정
-service = Service(GeckoDriverManager(version="v0.35.0", os_system_manager=os_manager).install())
-driver = webdriver.Firefox(service=service, options=firefox_options)
+try:
+    logger.info(" 🦎 Initializing GeckoDriver service...")
+    driver = webdriver.Firefox(options=firefox_options)
+except Exception as e:
+    logger.error("Failed to initialize GeckoDriver service:", str(e))
+    sleep(30)
+    exit(1)
 
 @app.route('/scrape-twitter', methods=['POST'])
 def scrape_twitter():
