@@ -64,43 +64,58 @@ def scrape_twitter():
             lambda d: d.execute_script("return window.__runPxScript !== undefined")
         )
 
+        # Text content extraction
         text_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/section/div/div/div[1]/div/div/article/div/div/div[3]/div[1]/div"
-        text = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, text_xpath))
-        )
-
+        try:
+            text = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, text_xpath))
+            ).text
+        except TimeoutException:
+            return jsonify({"error": "Timeout loading text content"}), 500
+        
+        # Image extraction
         image_xpath = "//img[contains(@src, 'https://pbs.twimg.com/media')]"
-        image = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, image_xpath))
-        )
+        try:
+            image = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, image_xpath))
+            ).get_attribute('src')
+        except TimeoutException:
+            return jsonify({"error": "Timeout loading image"}), 500
 
+        # Username extraction
         username_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[2]/div/div/div[1]/div/div/div[2]/div/div/a/div/span"
-        username = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, username_xpath))
-        )
+        try:
+            username = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, username_xpath))
+            ).text
+        except TimeoutException:
+            return jsonify({"error": "Timeout loading username"}), 500
 
-        meta_tag = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located(
-                (By.XPATH, '//meta[@property="og:title"]')
-            )
-        )
+        # Meta tag extraction
+        try:
+            meta_tag = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//meta[@property="og:title"]')
+                )
+            ).get_attribute('content')
+            
+        except TimeoutException:
+            return jsonify({"error": "Timeout loading meta tag"}), 500
 
-        meta_content = meta_tag.get_attribute("content")
-        text_content = text.text
-        image_url = image.get_attribute('src')
-        username_content = username.text
 
         driver.quit()
-
+        
         return jsonify({
-            "meta_content": meta_content,
-            "text_content": text_content,
-            "image_url": image_url,
-            "username_content": username_content
+            "text": text,
+            "image": image,
+            "username": username,
+            "meta_tag": meta_tag
         })
 
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # Return 500 Internal Server Error with error message
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=18081)
