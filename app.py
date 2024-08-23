@@ -42,8 +42,7 @@ def scrape_twitter():
         # GeckoDriver 로드
         try:
             logger.info(" 🦎 Initializing GeckoDriver service...")
-            service = Service(GeckoDriverManager().install())  # Dynamically fetch the driver
-            driver = webdriver.Firefox(options=firefox_options, service=service)
+            driver = webdriver.Firefox(options=firefox_options)
         except WebDriverException as e:
             logger.error("Failed to initialize GeckoDriver service: %s", str(e))
             return jsonify({"error": "Failed to initialize GeckoDriver service"}), 500
