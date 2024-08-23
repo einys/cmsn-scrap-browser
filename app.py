@@ -39,10 +39,12 @@ else :
 firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
 
 os_manager = OperationSystemManager("linux_aarch64")
+
 # GeckoDriver 설정
 try:
     logger.info(" 🦎 Initializing GeckoDriver service...")
-    driver = webdriver.Firefox(options=firefox_options)
+    service = Service(port=4444)  # 특정 포트 지정
+    driver = webdriver.Firefox(options=firefox_options, service=service)
 except Exception as e:
     logger.error("Failed to initialize GeckoDriver service:", str(e))
     sleep(30)
@@ -104,6 +106,7 @@ def scrape_twitter():
 
 
         driver.quit()
+        
         
         return jsonify({
             "text": text,
