@@ -40,6 +40,9 @@ while True:
         # Prepare the payload
         url = f"https://x.com/i/status/{tweet_id}"
         payload = json.dumps({"url": url})
+        
+        # print the id
+        print(f"Requesting Tweet ID: {tweet_id}")
 
         try:
             # Send the POST request
@@ -58,7 +61,7 @@ while True:
             print(f"URL: {url}")
             print(f"Status Code: {response.status_code}")
             print(f"Response: {response.text}")
-            print("\n\n")
+            print("\n")
 
         except requests.exceptions.RequestException as e:
             # Handle any exceptions and log the error into the CSV file
@@ -73,7 +76,9 @@ while True:
             # Print the error (optional)
             print(f"URL: {url}")
             print(f"Error: {str(e)}")
-            print("\n\n")
+            print("\n")
 
         # Sleep for a random time between 10 to 50 seconds to avoid rate-limiting issues
-        time.sleep(random.uniform(10, 50))
+        sec = random.uniform(10, 50)
+        print(f"Sleeping for {sec:.2f} seconds...\n\n")
+        time.sleep(sec)
