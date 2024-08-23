@@ -1,30 +1,27 @@
 import os
 import platform
-from time import sleep
 from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from webdriver_manager.firefox import GeckoDriverManager
-from webdriver_manager.core.os_manager import OperationSystemManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 app = Flask(__name__)
-
 
 # Firefox 옵션 설정 초기화
 firefox_options = Options()
 
 logger.info(" 🌟 System info: " + platform.system() + " " + platform.machine()) 
+
 # Set the binary location
 if platform.system() == "Darwin":  # macOS
     logger.info(" >> macOS system")
@@ -38,28 +35,24 @@ else :
     
 firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
 
-os_manager = OperationSystemManager("linux_aarch64")
-
-
 @app.route('/scrape-twitter', methods=['POST'])
 def scrape_twitter():
+    driver = None
     try:
         # GeckoDriver 로드
         try:
             logger.info(" 🦎 Initializing GeckoDriver service...")
-            service = Service(port=9222)  # 특정 포트 지정
+            service = Service(GeckoDriverManager().install())  # Dynamically fetch the driver
             driver = webdriver.Firefox(options=firefox_options, service=service)
-        except Exception as e:
+        except WebDriverException as e:
             logger.error("Failed to initialize GeckoDriver service: %s", str(e))
-            sleep(30)
-            exit(1)
+            return jsonify({"error": "Failed to initialize GeckoDriver service"}), 500
             
         data = request.json
         url = data.get("url")
         if not url:
             return jsonify({"error": "URL is required"}), 400
         
-
         # 페이지 로드 및 데이터 추출 로직은 동일
         driver.get(url)
 
@@ -74,6 +67,7 @@ def scrape_twitter():
                 EC.presence_of_element_located((By.XPATH, text_xpath))
             ).text
         except TimeoutException:
+            logger.error("Timeout loading text content")
             return jsonify({"error": "Timeout loading text content"}), 500
         
         # Image extraction
@@ -83,7 +77,8 @@ def scrape_twitter():
                 EC.presence_of_element_located((By.XPATH, image_xpath))
             ).get_attribute('src')
         except TimeoutException:
-            return jsonify({"error": "Timeout loading image"}), 500
+            logger.warning("Timeout loading image.")
+            image = None
 
         # Username extraction
         username_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[2]/div/div/div[1]/div/div/div[2]/div/div/a/div/span"
@@ -92,6 +87,7 @@ def scrape_twitter():
                 EC.presence_of_element_located((By.XPATH, username_xpath))
             ).text
         except TimeoutException:
+            logger.error("Timeout loading username")
             return jsonify({"error": "Timeout loading username"}), 500
 
         # Meta tag extraction
@@ -101,14 +97,10 @@ def scrape_twitter():
                     (By.XPATH, '//meta[@property="og:title"]')
                 )
             ).get_attribute('content')
-            
         except TimeoutException:
-            return jsonify({"error": "Timeout loading meta tag"}), 500
+            logger.warning("Timeout loading meta tag.")
+            meta_tag = None
 
-
-        driver.quit()
-        
-        
         return jsonify({
             "text": text,
             "image": image,
@@ -116,10 +108,14 @@ def scrape_twitter():
             "meta_tag": meta_tag
         })
 
-
     except Exception as e:
-        # Return 500 Internal Server Error with error message
+        logger.error("Internal server error: %s", str(e))
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+
+    finally:
+        if driver:
+            logger.info("Closing the WebDriver...")
+            driver.quit()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=18081)
