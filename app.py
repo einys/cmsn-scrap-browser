@@ -40,19 +40,20 @@ firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 
 
 os_manager = OperationSystemManager("linux_aarch64")
 
-# GeckoDriver 설정
-try:
-    logger.info(" 🦎 Initializing GeckoDriver service...")
-    service = Service(port=9222)  # 특정 포트 지정
-    driver = webdriver.Firefox(options=firefox_options, service=service)
-except Exception as e:
-    logger.error("Failed to initialize GeckoDriver service: %s", str(e))
-    sleep(30)
-    exit(1)
 
 @app.route('/scrape-twitter', methods=['POST'])
 def scrape_twitter():
     try:
+        # GeckoDriver 로드
+        try:
+            logger.info(" 🦎 Initializing GeckoDriver service...")
+            service = Service(port=9222)  # 특정 포트 지정
+            driver = webdriver.Firefox(options=firefox_options, service=service)
+        except Exception as e:
+            logger.error("Failed to initialize GeckoDriver service: %s", str(e))
+            sleep(30)
+            exit(1)
+            
         data = request.json
         url = data.get("url")
         if not url:
