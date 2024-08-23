@@ -43,10 +43,10 @@ os_manager = OperationSystemManager("linux_aarch64")
 # GeckoDriver 설정
 try:
     logger.info(" 🦎 Initializing GeckoDriver service...")
-    service = Service(port=4444)  # 특정 포트 지정
+    service = Service(port=9222)  # 특정 포트 지정
     driver = webdriver.Firefox(options=firefox_options, service=service)
 except Exception as e:
-    logger.error("Failed to initialize GeckoDriver service:", str(e))
+    logger.error("Failed to initialize GeckoDriver service: %s", str(e))
     sleep(30)
     exit(1)
 
