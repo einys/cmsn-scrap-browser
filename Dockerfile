@@ -33,4 +33,4 @@ COPY app.py .
 EXPOSE 18081
 
 # Gunicorn을 사용해 Flask 애플리케이션 실행
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:18081", "app:app"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:18081", "app:app"]
