@@ -57,9 +57,9 @@ def scrape_twitter():
         # 페이지 로드 및 데이터 추출 로직은 동일
         driver.get(url)
 
-        WebDriverWait(driver, 10).until(
-            lambda d: d.execute_script("return window.__runPxScript !== undefined")
-        )
+        # WebDriverWait(driver, 10).until(
+        #     lambda d: d.execute_script("return window.__runPxScript !== undefined")
+        # )
 
         # Text content extraction
         text_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/section/div/div/div[1]/div/div/article/div/div/div[3]/div[1]/div"

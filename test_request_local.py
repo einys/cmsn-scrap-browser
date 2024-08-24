@@ -79,6 +79,6 @@ while True:
             print("\n")
 
         # Sleep for a random time between 10 to 50 seconds to avoid rate-limiting issues
-        sec = random.uniform(10, 50)
+        sec = random.uniform(1, 5)
         print(f"Sleeping for {sec:.2f} seconds...\n\n")
         time.sleep(sec)
