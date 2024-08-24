@@ -1,5 +1,6 @@
 import os
 import platform
+import traceback
 from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
@@ -38,6 +39,10 @@ firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 
 @app.route('/scrape-twitter', methods=['POST'])
 def scrape_twitter():
     driver = None
+    
+    # reise any test error
+    raise Exception("Test error")
+    
     try:
         # GeckoDriver 로드
         try:
@@ -108,8 +113,9 @@ def scrape_twitter():
         })
 
     except Exception as e:
-        logger.error("Internal server error: %s", str(e))
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+        print("❌ Error occured ")
+        # 에러 핸들러가 자동으로 호출되므로, 별도의 처리 없이도 됩니다.
+        raise e
 
     finally:
         if driver:
@@ -118,3 +124,18 @@ def scrape_twitter():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=18081)
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Capture the traceback
+    tb_str = traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)
+    
+    # Log the detailed error message and traceback
+    logger.error("Internal server error: %s", "".join(tb_str))
+    
+    # Return the error details in the response
+    return jsonify({
+        "error": "Internal server error",
+        "message": str(e),
+        "traceback": "".join(tb_str)
+    }), 500
