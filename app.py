@@ -36,18 +36,18 @@ else :
     
 firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
 
+# GeckoDriver 로드
+try:
+    logger.info(" 🦎 Initializing GeckoDriver service...")
+    driver = webdriver.Firefox(options=firefox_options)
+except WebDriverException as e:
+    logger.error("Failed to initialize GeckoDriver service: %s", str(e))
+    exit(1)
+
 @app.route('/scrape-twitter', methods=['POST'])
 def scrape_twitter():
-    driver = None
     
     try:
-        # GeckoDriver 로드
-        try:
-            logger.info(" 🦎 Initializing GeckoDriver service...")
-            driver = webdriver.Firefox(options=firefox_options)
-        except WebDriverException as e:
-            logger.error("Failed to initialize GeckoDriver service: %s", str(e))
-            return jsonify({"error": "Failed to initialize GeckoDriver service"}), 500
             
         data = request.json
         url = data.get("url")
@@ -114,10 +114,10 @@ def scrape_twitter():
         # 에러 핸들러가 자동으로 호출되므로, 별도의 처리 없이도 됩니다.
         raise e
 
-    finally:
-        if driver:
-            logger.info("Closing the WebDriver...")
-            driver.quit()
+    # finally:
+    #     if driver:
+    #         logger.info("Closing the WebDriver...")
+    #         driver.quit()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=18081)
