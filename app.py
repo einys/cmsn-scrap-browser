@@ -40,9 +40,6 @@ firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 
 def scrape_twitter():
     driver = None
     
-    # reise any test error
-    raise Exception("Test error")
-    
     try:
         # GeckoDriver 로드
         try:
