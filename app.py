@@ -112,6 +112,7 @@ def scrape_twitter():
 
     except Exception as e:
         print("❌ Error occured ")
+        print("log app print exception:", e)
         # 에러 핸들러가 자동으로 호출되므로, 별도의 처리 없이도 됩니다.
         raise e
 
