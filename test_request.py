@@ -6,11 +6,11 @@ import time
 import os
 
 # File paths
-csv_file_path = 'testapi.items.csv'  # Change this to your CSV file path
+csv_file_path = 'filtered_testapi.items.csv'  # Change this to your CSV file path
 output_csv_path = "output_results.csv"  # The file where results will be saved
 
 # API URL
-api_url = "http://3.34.178.12:18081/scrape-twitter"
+api_url = "http://13.209.246.170:18081/scrape-twitter"
 
 # Reading the CSV file
 with open(csv_file_path, 'r', encoding='utf-8') as csvfile:
@@ -79,6 +79,6 @@ while True:
             print("\n")
 
         # Sleep for a random time between 10 to 50 seconds to avoid rate-limiting issues
-        sec = random.uniform(10, 50)
+        sec = random.uniform(5, 30)
         print(f"Sleeping for {sec:.2f} seconds...\n\n")
         time.sleep(sec)
