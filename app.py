@@ -40,6 +40,7 @@ firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 
 try:
     logger.info(" 🦎 Initializing GeckoDriver service...")
     driver = webdriver.Firefox(options=firefox_options)
+    logger.info(" ✅ GeckoDriver service initialized successfully.")
 except WebDriverException as e:
     logger.error("Failed to initialize GeckoDriver service: %s", str(e))
     exit(1)
