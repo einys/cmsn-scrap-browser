@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import traceback
 from flask import Flask, request, jsonify
 from selenium import webdriver
@@ -34,7 +35,7 @@ else :
     logger.info(" >> Windows system")
     firefox_options.binary_location = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
     
-firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
+# firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
 
 # GeckoDriver 로드
 try:
@@ -91,8 +92,28 @@ def scrape_twitter():
         except TimeoutException:
             logger.error("Timeout loading username")
             return jsonify({"error": "Timeout loading username"}), 500
+        
+        user_nickname_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[2]/div/div/div[1]/div/div/div[1]/div/a/div/div[1]/span/span"
+        try:
+            user_nickname = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, user_nickname_xpath))
+            ).text
+        except TimeoutException:
+            logger.warning("Timeout loading user_nickname")
+            user_nickname = None
+        
+        # User profile image extraction
+        user_profile_img = None
+        user_profile_img_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[1]/div[1]/div/div/div/div[2]/div/div[2]/div/a/div[3]/div/div[2]/div/img"
+        try:
+            user_profile_img = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, user_profile_img_xpath))
+            ).get_attribute('src')
+        except TimeoutException:
+            logger.warning("Timeout loading user profile image.")
 
         # Meta tag extraction
+        meta_tag = None
         try:
             meta_tag = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located(
@@ -101,20 +122,46 @@ def scrape_twitter():
             ).get_attribute('content')
         except TimeoutException:
             logger.warning("Timeout loading meta tag.")
-            meta_tag = None
+            
+        link_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/section/div/div/div[1]/div/div/article/div/div/div[3]/div[2]/div/a"
+        content_link = None
+        try:
+            content_link = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, link_xpath))
+            ).text
+
+            # 링크만 추출하는 패턴
+            pattern = r"(?=[a-zA-Z0-9/-]*\.[a-zA-Z0-9/-])[a-zA-Z0-9./-]+"
+
+            # 패턴에 맞는 부분 추출
+            match = re.search(pattern, content_link)
+            content_link = match.group(0)
+            content_link = "https://" + content_link
+        except TimeoutException:
+            logger.error("Timeout loading link")
+            logger.warning("Timeout loading link.")
+        except Exception as e:
+            print(f"General exception occurred: {e}")
+            
 
         return jsonify({
             "text": text,
             "image": image,
             "username": username,
-            "meta_tag": meta_tag
+            "user_nickname": user_nickname,
+            "user_profile_img": user_profile_img,
+            "meta_tag": meta_tag,
+            "link": content_link
         })
 
     except Exception as e:
         print("❌ Error occured ")
-        print("log app print exception:", e)
+        print("My log app print exception:", e)
         # 에러 핸들러가 자동으로 호출되므로, 별도의 처리 없이도 됩니다.
-        raise e
+            # Return the error details in the response
+        return jsonify({
+            "message": str(e)
+        }), 500
 
     # finally:
     #     if driver:
@@ -124,17 +171,3 @@ def scrape_twitter():
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=18081)
 
-@app.errorhandler(Exception)
-def handle_exception(e):
-    # Capture the traceback
-    tb_str = traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)
-    
-    # Log the detailed error message and traceback
-    logger.error("Internal server error: %s", "".join(tb_str))
-    
-    # Return the error details in the response
-    return jsonify({
-        "error": "Internal server error",
-        "message": str(e),
-        "traceback": "".join(tb_str)
-    }), 500
