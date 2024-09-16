@@ -50,6 +50,8 @@ python app.py
 
 By default, the server will start on `http://0.0.0.0:18081`.
 
+---
+
 # API Usage description
 
 ## /scrape-twitter
