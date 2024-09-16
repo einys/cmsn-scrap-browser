@@ -50,9 +50,12 @@ python app.py
 
 By default, the server will start on `http://0.0.0.0:18081`.
 
-## Usage
+# API Usage description
 
-To scrape data from a Twitter page, send a POST request to `/scrape-twitter` with a JSON payload containing the Twitter URL:
+## /scrape-twitter
+
+### Request Parameters
+url (string, required): The URL of the Twitter post to be scraped. e.g.https://twitter.com/username/status/1234567890
 
 ### Example Request
 
