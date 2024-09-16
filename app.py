@@ -13,6 +13,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 import logging
+import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,6 +24,13 @@ app = Flask(__name__)
 firefox_options = Options()
 
 logger.info(" 🌟 System info: " + platform.system() + " " + platform.machine())
+
+# print current time with timezone and icon
+logger.info(" 🚀 Starting the Flask app...")
+logger.info(" 🦊 Initializing Firefox WebDriver...")
+current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+timezone = datetime.datetime.now().astimezone().tzinfo
+logger.info(f" ⏰ Current time: {current_time} Timezone: {timezone}")
 
 WAITING_TIME_SEC = 4
 WAITING_TIME_SEC_LINK = 1
@@ -60,6 +68,13 @@ def scrape_twitter():
         url = data.get("url")
         if not url:
             return jsonify({"error": "URL is required"}), 400
+
+        logger.warning(
+            f"🔗 Scraping the URL(by POST request! depreciated): {url}")
+
+        # log request ip address
+        logger.info(
+            f"🌐 Who is requesting? Requesting IP address: {request.remote_addr}")
 
         # 페이지 로드 및 데이터 추출 로직은 동일
         driver.get(url)
@@ -180,6 +195,13 @@ def scrape_twitter_get():
         if not url:
             return jsonify({"error": "URL is required"}), 400
 
+        # save current time and log it
+        init_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        logger.info(f"🚀 Starting the scraping process at {init_time}")
+
+        # print url
+        logger.info(f"🔗 Scraping the URL: {url}")
+
         # 페이지 로드 및 데이터 추출 로직은 동일
         driver.get(url)
 
@@ -197,6 +219,12 @@ def scrape_twitter_get():
             logger.error("Timeout loading text content")
             return jsonify({"error": "Timeout loading text content"}), 500
 
+        # calculate running time until now and log it as seconds
+        running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                            "%Y-%m-%d %H:%M:%S")
+        logger.info(
+            f"⏱️  Text has been scraped. Running time: {running_time.total_seconds()} sec")
+
         # Image extraction
         image_xpath = "//img[contains(@src, 'https://pbs.twimg.com/media')]"
         try:
@@ -206,6 +234,12 @@ def scrape_twitter_get():
         except TimeoutException:
             logger.warning("Timeout loading image.")
             image = None
+
+        # calculate running time until now and log it as seconds
+        running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                            "%Y-%m-%d %H:%M:%S")
+        logger.info(
+            f"⏱️  Image has been scraped. Running time: {running_time.total_seconds()} sec")
 
         # Username extraction
         username_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[2]/div/div/div[1]/div/div/div[2]/div/div/a/div/span"
@@ -217,6 +251,12 @@ def scrape_twitter_get():
             logger.error("Timeout loading username")
             return jsonify({"error": "Timeout loading username"}), 500
 
+        # calculate running time until now and log it as seconds
+        running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                            "%Y-%m-%d %H:%M:%S")
+        logger.info(
+            f"⏱️  Username has been scraped. Running time: {running_time.total_seconds()} sec")
+
         user_nickname_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[2]/div/div/div[1]/div/div/div[1]/div/a/div/div[1]/span/span"
         try:
             user_nickname = WebDriverWait(driver, WAITING_TIME_SEC).until(
@@ -225,6 +265,12 @@ def scrape_twitter_get():
         except TimeoutException:
             logger.warning("Timeout loading user_nickname")
             user_nickname = None
+
+        # calculate running time until now and log it as seconds
+        running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                            "%Y-%m-%d %H:%M:%S")
+        logger.info(
+            f"⏱️  User nickname has been scraped. Running time: {running_time.total_seconds()} sec")
 
         # User profile image extraction
         user_profile_img = None
@@ -237,6 +283,12 @@ def scrape_twitter_get():
         except TimeoutException:
             logger.warning("Timeout loading user profile image.")
 
+        # calculate running time until now and log it as seconds
+        running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                            "%Y-%m-%d %H:%M:%S")
+        logger.info(
+            f"⏱️  User profile image has been scraped. Running time: {running_time.total_seconds()} sec")
+
         # Meta tag extraction
         meta_tag = None
         try:
@@ -247,6 +299,12 @@ def scrape_twitter_get():
             ).get_attribute('content')
         except TimeoutException:
             logger.warning("Timeout loading meta tag.")
+
+        # calculate running time until now and log it as seconds
+        running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                            "%Y-%m-%d %H:%M:%S")
+        logger.info(
+            f"⏱️  Meta tag has been scraped. Running time: {running_time.total_seconds()} sec")
 
         link_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/section/div/div/div[1]/div/div/article/div/div/div[3]/div[2]/div/a"
         content_link = None
@@ -268,6 +326,17 @@ def scrape_twitter_get():
         except Exception as e:
             print(f"General exception occurred: {e}")
 
+        # calculate running time until now and log it as seconds
+        running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                            "%Y-%m-%d %H:%M:%S")
+        logger.info(
+            f"⏱️  Link has been scraped. Running time: {running_time.total_seconds()} sec")
+
+        # log total running time
+        logger.info(
+            f"🏁 Total running time: {running_time.total_seconds()} sec, return now.")
+
+        # return scraped data
         return jsonify({
             "text": text,
             "image": image,
