@@ -77,11 +77,15 @@ curl -X POST http://localhost:18081/scrape-twitter \
 
 ```json
 {
-  "text": "This is an example tweet text.",
-  "image": "https://pbs.twimg.com/media/example.jpg",
-  "username": "exampleuser",
-  "meta_tag": "An example tweet title"
+    "text": "This is an example tweet text.",
+    "image": "https://pbs.twimg.com/media/example.jpg",
+    "username": "exampleuser",
+    "user_nickname": "샘플",
+    "user_profile_img": "",
+    "meta_tag": "An example tweet title",
+    "link": ""
 }
+
 ```
 
 ## Error Handling
