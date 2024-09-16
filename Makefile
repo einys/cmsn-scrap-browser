@@ -35,9 +35,6 @@ checkdiff:
 echo:
 	@echo "run!"
 
-all: checkdiff login build push ## All publish process.
-
-
 show-commit: ## Show a commit by hash. ex) make show-commit HASH=1q2w3e
 	@git show $(HASH)
 
@@ -66,5 +63,7 @@ push-public: ## Push docker image to ecr repo.
 	@docker push ${PUBLIC_NAME}:${TAG}
 	@docker push ${PUBLIC_NAME}:latest
 
-all-public: checkdiff login-public build-public push-public ## All publish process.
+all: checkdiff login-public build-public push-public ## All publish process.
+
+all-local: checkdiff build push ## All publish process.
 
