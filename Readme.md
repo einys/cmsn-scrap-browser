@@ -1,10 +1,17 @@
 
 ```markdown
-# Twitter Scraper Flask Application
+# Twitter Scraper
 
-This application is a Flask-based web service that uses Selenium WebDriver with Firefox to scrape data from Twitter pages. It extracts text content, images, usernames, and meta tags from a specified Twitter URL.
+A simple tool to scrape tweet data using a provided Twitter URL.
+
+## Table of Contents
+- [Installation](#installation)
+- [API usage description](#api-usage-description)
+
+# Installation
 
 ## Requirements
+This application is a Flask-based web service that uses Selenium WebDriver with Firefox to scrape data from Twitter pages. It extracts text content, images, usernames, and meta tags from a specified Twitter URL.
 
 To run this application, you need the following:
 
@@ -57,7 +64,7 @@ By default, the server will start on `http://0.0.0.0:18081`.
 ## /scrape-twitter
 
 ### Request Parameters
-url (string, required): The URL of the Twitter post to be scraped. e.g.https://twitter.com/username/status/1234567890
+- url (string, required): The URL of the Twitter post to be scraped. e.g.https://twitter.com/username/status/1234567890
 
 ### Example Request
 
