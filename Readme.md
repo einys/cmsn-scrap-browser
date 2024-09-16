@@ -63,12 +63,14 @@ By default, the server will start on `http://0.0.0.0:18081`.
 ## /scrape-twitter
 
 ### Request Parameters
-- url (string, required): The URL of the Twitter post to be scraped. e.g.https://twitter.com/username/status/1234567890
+- url (string, required): The URL of the Twitter post to be scraped. ex) https://twitter.com/username/status/1234567890
 
 ### Example Request
 
 ```bash
-curl -X POST http://localhost:18081/scrape-twitter -H "Content-Type: application/json" -d '{"url": "https://twitter.com/username/status/1234567890"}'
+curl -X POST http://localhost:18081/scrape-twitter \
+-H "Content-Type: application/json" \
+-d '{"url": "https://twitter.com/username/status/1234567890"}'
 ```
 
 ### Example Response
