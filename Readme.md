@@ -1,5 +1,4 @@
 
-```markdown
 # Twitter Scraper
 
 A simple tool to scrape tweet data using a provided Twitter URL.
