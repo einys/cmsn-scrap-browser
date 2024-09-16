@@ -47,7 +47,8 @@ else:
     logger.info(" >> Windows system")
     firefox_options.binary_location = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
 
-# firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
+# 이걸 하지 않으면 무한 exit 1 난다.
+firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
 
 # GeckoDriver 로드
 try:
