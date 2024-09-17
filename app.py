@@ -445,21 +445,6 @@ def scrapeMetadata():
         except TimeoutException:
             logger.warning("Timeout loading meta description.")
 
-        meta_tag_url = None
-        try:
-            meta_tag_url = WebDriverWait(driver, WAITING_TIME_SEC).until(
-                EC.presence_of_element_located(
-                    (By.XPATH, '//meta[@property="og:url"]')
-                )
-            ).get_attribute('content')
-            # calculate running time until now and log it as seconds
-            running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
-                                                                                "%Y-%m-%d %H:%M:%S")
-            logger.info(
-                f"⏱️  Meta URL done. ({round(running_time.total_seconds(), 2)} sec) URL: {meta_tag_url}")
-        except TimeoutException:
-            logger.warning("Timeout loading meta url.")
-
         # log total running time
         logger.info(
             f"🏁 Total running time: {round(running_time.total_seconds(), 2)} sec, return now.")
@@ -467,9 +452,8 @@ def scrapeMetadata():
         # return scraped data
         return jsonify({
             "title": meta_tag_title,
-            "image": meta_tag_image,
+            "img": meta_tag_image,
             "description": meta_tag_description,
-            "url": meta_tag_url
         })
 
     except Exception as e:

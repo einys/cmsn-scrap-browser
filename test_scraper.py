@@ -43,12 +43,12 @@ class TestMetaScraper(unittest.TestCase):
         # Verify the response contains the meta data
         json_data = response.get_json()
         self.assertIn('title', json_data)
-        self.assertIn('image', json_data)
+        self.assertIn('img', json_data)
         self.assertIn('description', json_data)
 
         # Further checks for data correctness
         self.assertIsInstance(json_data['title'], str)
-        self.assertIsInstance(json_data['image'], str)
+        self.assertIsInstance(json_data['img'], str)
         self.assertIsInstance(json_data['description'], str)
         print(f"Meta data: {json_data}")
 
