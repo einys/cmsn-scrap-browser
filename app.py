@@ -3,6 +3,7 @@ import platform
 import re
 import traceback
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
@@ -30,6 +31,7 @@ logger.setLevel(logging.INFO)
 
 
 app = Flask(__name__)
+CORS(app)
 
 # Firefox 옵션 설정 초기화
 firefox_options = Options()

@@ -2,3 +2,4 @@ Flask==2.3.2  # Flask 최신 버전
 selenium==4.8.0
 webdriver-manager==4.0.2
 gunicorn==20.1.0
+flask-cors==5.0.0
