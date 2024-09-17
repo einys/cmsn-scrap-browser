@@ -15,8 +15,19 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 import logging
 import datetime
 
-logging.basicConfig(level=logging.INFO)
+# Create a custom formatter with your desired time format
+time_format = "%y/%m/%d %H:%M:%S%z"
+formatter = logging.Formatter(
+    fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt=time_format)
+
+# Create a logger and set the custom formatter
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+# Set the log level (optional, can be DEBUG, INFO, WARNING, ERROR, CRITICAL)
+logger.setLevel(logging.INFO)
+
 
 app = Flask(__name__)
 
