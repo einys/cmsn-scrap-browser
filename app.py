@@ -376,5 +376,120 @@ def scrape_twitter_get():
     #         driver.quit()
 
 
+@app.route('/meta', methods=['GET'])
+def scrapeMetadata():
+    try:
+        url = request.args.get("url")
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+
+        # save current time and log it
+        init_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        logger.info(f"🚀 Starting the scraping process at {init_time}")
+
+        # print url
+        logger.info(f"🔗 Scraping the URL: {url}")
+
+        # 페이지 로드 및 데이터 추출 로직은 동일
+        driver.get(url)
+
+        # WebDriverWait(driver, 10).until(
+        #     lambda d: d.execute_script("return window.__runPxScript !== undefined")
+        # )
+
+        # Meta tag extraction. Get title, image, description, etc.
+        meta_tag_title = None
+        try:
+            meta_tag_title = WebDriverWait(driver, WAITING_TIME_SEC).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//meta[@property="og:title"]')
+                )
+            ).get_attribute('content')
+            # calculate running time until now and log it as seconds
+            running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                                "%Y-%m-%d %H:%M:%S")
+            logger.info(
+                f"⏱️  Meta title done. ({round(running_time.total_seconds(), 2)} sec) Title: {meta_tag_title}")
+        except TimeoutException:
+            logger.warning("Timeout loading meta title.")
+
+        meta_tag_image = None
+        try:
+            meta_tag_image = WebDriverWait(driver, WAITING_TIME_SEC).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//meta[@property="og:image"]')
+                )
+            ).get_attribute('content')
+            # calculate running time until now and log it as seconds
+            running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                                "%Y-%m-%d %H:%M:%S")
+
+            if meta_tag_image.__len__ > 16:
+                logger.info(
+                    f"⏱️  Meta image done. ({round(running_time.total_seconds(), 2)} sec) Image: {meta_tag_image[:16]}...")
+            else:
+                logger.info(
+                    f"⏱️  Meta image done. ({round(running_time.total_seconds(), 2)} sec) Image: {meta_tag_image}")
+
+        except TimeoutException:
+            logger.warning("Timeout loading meta image.")
+
+        meta_tag_description = None
+        try:
+            meta_tag_description = WebDriverWait(driver, WAITING_TIME_SEC).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//meta[@property="og:description"]')
+                )
+            ).get_attribute('content')
+            # calculate running time until now and log it as seconds
+            running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                                "%Y-%m-%d %H:%M:%S")
+            logger.info(
+                f"⏱️  Meta desc done. ({round(running_time.total_seconds(), 2)} sec) Description: {meta_tag_description[:16]}...")
+        except TimeoutException:
+            logger.warning("Timeout loading meta description.")
+
+        meta_tag_url = None
+        try:
+            meta_tag_url = WebDriverWait(driver, WAITING_TIME_SEC).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//meta[@property="og:url"]')
+                )
+            ).get_attribute('content')
+            # calculate running time until now and log it as seconds
+            running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                                "%Y-%m-%d %H:%M:%S")
+            logger.info(
+                f"⏱️  Meta URL done. ({round(running_time.total_seconds(), 2)} sec) URL: {meta_tag_url}")
+        except TimeoutException:
+            logger.warning("Timeout loading meta url.")
+
+        # log total running time
+        logger.info(
+            f"🏁 Total running time: {round(running_time.total_seconds(), 2)} sec, return now.")
+
+        # return scraped data
+        return jsonify({
+            "title": meta_tag_title,
+            "image": meta_tag_image,
+            "description": meta_tag_description,
+            "url": meta_tag_url
+        })
+
+    except Exception as e:
+        print("❌ Error occured ")
+        print("My app print exception:", e)
+        # 에러 핸들러가 자동으로 호출되므로, 별도의 처리 없이도 됩니다.
+        # Return the error details in the response
+        return jsonify({
+            "message": str(e)
+        }), 500
+
+    # finally:
+    #     if driver:
+    #         logger.info("Closing the WebDriver...")
+    #         driver.quit()
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=18081)
