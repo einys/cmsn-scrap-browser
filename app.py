@@ -219,10 +219,6 @@ def scrape_twitter_get():
         # 페이지 로드 및 데이터 추출 로직은 동일
         driver.get(url)
 
-        # WebDriverWait(driver, 10).until(
-        #     lambda d: d.execute_script("return window.__runPxScript !== undefined")
-        # )
-
         # Text content extraction
         text_xpath = "/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/section/div/div/div[1]/div/div/article/div/div/div[3]/div[1]/div"
         try:
@@ -424,7 +420,7 @@ def scrapeMetadata():
             running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
                                                                                 "%Y-%m-%d %H:%M:%S")
 
-            if meta_tag_image.__len__ > 16:
+            if len(meta_tag_image) > 16:
                 logger.info(
                     f"⏱️  Meta image done. ({round(running_time.total_seconds(), 2)} sec) Image: {meta_tag_image[:16]}...")
             else:
