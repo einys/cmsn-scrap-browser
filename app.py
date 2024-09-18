@@ -45,7 +45,7 @@ current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 timezone = datetime.datetime.now().astimezone().tzinfo
 logger.info(f" ⏰ Current time: {current_time} Timezone: {timezone}")
 
-WAITING_TIME_SEC = 4
+WAITING_TIME_SEC = 5
 WAITING_TIME_SEC_LINK = 1
 
 # Set the binary location
@@ -56,12 +56,12 @@ elif platform.system() == "Linux":  # Ubuntu or Linux-based Docker container
     logger.info(" >> Linux system")
     firefox_options.binary_location = os.getenv(
         "FIREFOX_BINARY_PATH", "/usr/bin/firefox")
+    # 브라우저 창을 열지 않고 실행. # 이걸 하지 않으면 무한 exit 1 난다.
+    firefox_options.add_argument("--headless")
 else:
     logger.info(" >> Windows system")
     firefox_options.binary_location = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
 
-# 이걸 하지 않으면 무한 exit 1 난다.
-firefox_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
 
 # GeckoDriver 로드
 try:
@@ -445,6 +445,8 @@ def scrapeMetadata():
         except TimeoutException:
             logger.warning("Timeout loading meta description.")
 
+        running_time = datetime.datetime.now() - datetime.datetime.strptime(init_time,
+                                                                            "%Y-%m-%d %H:%M:%S")
         # log total running time
         logger.info(
             f"🏁 Total running time: {round(running_time.total_seconds(), 2)} sec, return now.")
