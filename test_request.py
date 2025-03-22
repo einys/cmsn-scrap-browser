@@ -10,7 +10,7 @@ csv_file_path = 'filtered_testapi.items.csv'  # Change this to your CSV file pat
 output_csv_path = "output_results.csv"  # The file where results will be saved
 
 # API URL
-api_url = "http://13.209.246.170:18081/scrape-twitter"
+api_url = "http://localhost:18081/scrape-twitter"
 
 # Reading the CSV file
 with open(csv_file_path, 'r', encoding='utf-8') as csvfile:
@@ -21,7 +21,7 @@ with open(csv_file_path, 'r', encoding='utf-8') as csvfile:
 while True:
     # Check if the output CSV file already exists and has content
     file_exists = os.path.isfile(output_csv_path)
-    
+
     # Open the output CSV file in append mode
     with open(output_csv_path, 'a', newline='', encoding='utf-8') as csvfile:
         fieldnames = ['URL', 'Status Code', 'Response', 'Error', 'Timestamp']
@@ -30,7 +30,7 @@ while True:
         # Write the header only if the file does not exist or is empty
         if not file_exists or os.stat(output_csv_path).st_size == 0:
             writer.writeheader()
-            
+
         # Shuffle the list of tweet IDs randomly
         random.shuffle(ids)
 
@@ -40,21 +40,23 @@ while True:
         # Prepare the payload
         url = f"https://x.com/i/status/{tweet_id}"
         payload = json.dumps({"url": url})
-        
+
         # print the id
         print(f"Requesting Tweet ID: {tweet_id}")
 
         try:
             # Send the POST request
-            response = requests.post(api_url, headers={"Content-Type": "application/json"}, data=payload)
+            response = requests.post(
+                api_url, headers={"Content-Type": "application/json"}, data=payload)
 
             # Log the response into the CSV file
             writer.writerow({
-            'URL': url,
-            'Status Code': response.status_code,
-            'Response': response.text,
-            'Error': '',  # No error
-            'Timestamp': time.strftime("%Y-%m-%d %H:%M:%S %Z%z")  # Add timestamp with timezone
+                'URL': url,
+                'Status Code': response.status_code,
+                'Response': response.text,
+                'Error': '',  # No error
+                # Add timestamp with timezone
+                'Timestamp': time.strftime("%Y-%m-%d %H:%M:%S %Z%z")
             })
 
             # Print the response (optional)
@@ -66,11 +68,12 @@ while True:
         except requests.exceptions.RequestException as e:
             # Handle any exceptions and log the error into the CSV file
             writer.writerow({
-            'URL': url,
-            'Status Code': '',  # No status code
-            'Response': '',  # No response
-            'Error': str(e),
-            'Timestamp': time.strftime("%Y-%m-%d %H:%M:%S %Z%z")  # Add timestamp with timezone
+                'URL': url,
+                'Status Code': '',  # No status code
+                'Response': '',  # No response
+                'Error': str(e),
+                # Add timestamp with timezone
+                'Timestamp': time.strftime("%Y-%m-%d %H:%M:%S %Z%z")
             })
 
             # Print the error (optional)
