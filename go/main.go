@@ -30,9 +30,12 @@ func main() {
 	// Chrome 옵션 설정
 	caps := selenium.Capabilities{"browserName": "chrome"}
 	caps.AddChrome(chrome.Capabilities{Args: []string{
-		// "--headless", // 브라우저 UI 없이 실행. 테스트 시 주석 해제
+		"--headless=new",
 		"--disable-gpu",
 		"--no-sandbox",
+		"--window-size=1280,1024",
+		"--lang=ko-KR,ko",
+		"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
 	}})
 
 	// WebDriver 실행 (selenium server 없이 chromedriver로 바로 실행)
