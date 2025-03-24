@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -31,6 +32,44 @@ func init() {
 	}
 }
 
+// initWebDriver는 공통 WebDriver 초기화 로직을 담당합니다.
+func initWebDriver() (selenium.WebDriver, func(), error) {
+	// Chrome 옵션 설정
+	caps := selenium.Capabilities{"browserName": "chrome"}
+	chromeCaps := chrome.Capabilities{
+		Args: []string{
+			"--headless=new",
+			"--disable-gpu",
+			"--no-sandbox",
+			"--window-size=1280,1024",
+			"--disable-dev-shm-usage",
+			"--lang=ko-KR,ko",
+			"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+		},
+	}
+	caps.AddChrome(chromeCaps)
+
+	// ChromeDriver 서비스 시작
+	service, err := selenium.NewChromeDriverService(chromeDriverPath, port)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to start ChromeDriver: %v", err)
+	}
+
+	// 종료 함수: service.Stop() 호출
+	quitFunc := func() {
+		service.Stop()
+	}
+
+	// WebDriver 연결
+	wd, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
+	if err != nil {
+		quitFunc()
+		return nil, nil, fmt.Errorf("Failed to connect to WebDriver: %v", err)
+	}
+
+	return wd, quitFunc, nil
+}
+
 type TweetData struct {
 	Text           string   `json:"text"`
 	Images         []string `json:"images"`
@@ -43,12 +82,13 @@ type TweetData struct {
 
 func main() {
 
-	http.HandleFunc("/scrape", ScrapeHandler)
+	http.HandleFunc("/scrape-twitter", TweetScrapeHandler)
+	http.HandleFunc("/meta", MetaHandler)
 	fmt.Println("🚀 Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func ScrapeHandler(w http.ResponseWriter, r *http.Request) {
+func TweetScrapeHandler(w http.ResponseWriter, r *http.Request) {
 	tweetURL := r.URL.Query().Get("url")
 	if tweetURL == "" {
 		http.Error(w, "Missing 'url' query parameter", http.StatusBadRequest)
@@ -93,6 +133,32 @@ func ScrapeHandler(w http.ResponseWriter, r *http.Request) {
 	// Return as JSON
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tweetData)
+}
+
+// MetaHandler는 /meta?url= 경로에서 메타 태그 스크래핑을 수행합니다.
+func MetaHandler(w http.ResponseWriter, r *http.Request) {
+	pageURL := r.URL.Query().Get("url")
+	if pageURL == "" {
+		http.Error(w, "Missing 'url' query parameter", http.StatusBadRequest)
+		return
+	}
+
+	wd, quitFunc, err := initWebDriver()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer quitFunc()
+	defer wd.Quit()
+
+	metaData, err := ScrapeMeta(wd, pageURL)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to scrape meta: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(metaData)
 }
 
 func findTextByXPath(wd selenium.WebDriver, xpath string) string {
@@ -245,4 +311,99 @@ func ScrapeTweet(wd selenium.WebDriver, url string) (*TweetData, error) {
 		MetaTag:        metaTag,
 		Links:          links,
 	}, nil
+}
+
+func waitForPageLoad(wd selenium.WebDriver, timeoutSeconds int) error {
+	timeout := time.Duration(timeoutSeconds) * time.Second
+	endTime := time.Now().Add(timeout)
+	for {
+		state, err := wd.ExecuteScript("return document.readyState", nil)
+		if err == nil && state == "complete" {
+			return nil
+		}
+		if time.Now().After(endTime) {
+			return errors.New("timeout waiting for page load")
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// metaScrape는 HTTP 핸들러 함수로, URL 파라미터에서 대상 페이지의 URL을 받아 해당 페이지의 메타데이터(og:title, og:image, og:description)를 스크랩합니다.
+func ScrapeMeta(wd selenium.WebDriver, pageURL string) (interface{}, error) {
+
+	log.Printf("📥 크롤링 시작: %s", pageURL)
+
+	// 스크랩에 걸린 시간 체크를 위해 현재 시간 저장
+	startTime := time.Now()
+
+	// 메타 데이터를 저장할 맵
+	metaData := map[string]string{}
+
+	// 페이지 로딩
+	if err := wd.Get(pageURL); err != nil {
+		return nil, err
+	}
+
+	// 페이지 로딩 대기
+	if err := waitForPageLoad(wd, 5); err != nil {
+		return nil, fmt.Errorf("failed to wait for page load: %v", err)
+	}
+
+	// 여기까지 걸린 시간 체크
+	log.Printf("✅ 페이지 로딩 완료. 걸린 시간: %v", time.Since(startTime))
+
+	// og:title 추출 (우선, 없으면 <title> 태그로 대체)
+	titleElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:title"]`)
+	if err != nil {
+		titleElem, err = wd.FindElement(selenium.ByXPATH, `//head/title`)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find title element: %v", err)
+		}
+		metaData["title"], err = titleElem.Text()
+		if err != nil {
+			metaData["title"] = ""
+		}
+	} else {
+		metaData["title"], err = titleElem.GetAttribute("content")
+		if err != nil {
+			metaData["title"] = ""
+		}
+	}
+
+	log.Printf("🏷 Title: %s", metaData["title"])
+
+	// og:image 추출 (우선, 없으면 meta[name="image"]로 대체)
+	imageElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:image"]`)
+	if err != nil {
+		imageElem, err = wd.FindElement(selenium.ByXPATH, `//meta[@name="image"]`)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find image element: %v", err)
+		}
+	}
+	metaData["img"], err = imageElem.GetAttribute("content")
+	if err != nil {
+		metaData["img"] = ""
+	}
+
+	log.Printf("🖼 Image: %s", metaData["img"])
+
+	// og:description 추출 (우선, 없으면 meta[name="description"]로 대체)
+	descElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:description"]`)
+	if err != nil {
+		descElem, err = wd.FindElement(selenium.ByCSSSelector, `meta[name="description"]`)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find description element: %v", err)
+		}
+	}
+	metaData["description"], err = descElem.GetAttribute("content")
+	if err != nil {
+		metaData["description"] = ""
+	}
+
+	log.Printf("📝 Description: %s", metaData["description"])
+
+	// 크롤링 완료. 걸린 시간 출력
+	log.Printf("✅ 크롤링 완료: %s  걸린 시간: %v", pageURL, time.Since(startTime))
+
+	return metaData, nil
 }
