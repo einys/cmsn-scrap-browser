@@ -9,7 +9,7 @@ import (
 )
 
 func TestScrapeAPI(t *testing.T) {
-	req := httptest.NewRequest("GET", "/scrape?url=https://x.com/xxylolo/status/1903111391026012368", nil)
+	req := httptest.NewRequest("GET", "/scrape?url=https://x.com/naeng2_/status/1903488320367403357", nil)
 	w := httptest.NewRecorder()
 
 	ScrapeHandler(w, req)

@@ -5,18 +5,31 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/tebeka/selenium"
 	"github.com/tebeka/selenium/chrome"
 )
 
-const (
-	seleniumPath     = ""                               // selenium-server-standalone jar 경로 (안 써도 됨: chromedriver만 쓸 경우)
-	chromeDriverPath = "/opt/homebrew/bin/chromedriver" // chromedriver 위치
+var (
+	// chromedriver 위치
+	chromeDriverPath = "/usr/bin/chromedriver"
 	port             = 9515
 )
+
+func init() {
+	// macOS 환경(테스트 환경)인 경우 path를 /opt/homebrew/bin/chromedriver 로 설정
+	if runtime.GOOS == "darwin" {
+		log.Println("🍏 macOS detected. Setting chromedriver path to /opt/homebrew/bin/chromedriver")
+		chromeDriverPath = "/opt/homebrew/bin/chromedriver"
+	} else {
+		log.Println("🐧 Linux detected. Using default chromedriver path.")
+	}
+}
 
 type TweetData struct {
 	Text           string   `json:"text"`
@@ -29,6 +42,7 @@ type TweetData struct {
 }
 
 func main() {
+
 	http.HandleFunc("/scrape", ScrapeHandler)
 	fmt.Println("🚀 Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -48,6 +62,7 @@ func ScrapeHandler(w http.ResponseWriter, r *http.Request) {
 		"--disable-gpu",
 		"--no-sandbox",
 		"--window-size=1280,1024",
+		"--disable-dev-shm-usage", // 추가된 플래그
 		"--lang=ko-KR,ko",
 		"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
 	}})
@@ -81,10 +96,10 @@ func ScrapeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func findTextByXPath(wd selenium.WebDriver, xpath string) string {
-	log.Printf("🔍 Finding element by XPath: %s", xpath)
+
 	elem, err := wd.FindElement(selenium.ByXPATH, xpath)
 	if err != nil {
-		log.Printf("❌ Failed to find element: %v", err)
+		log.Printf("❌ Error: Failed to find element: %v", err)
 		return ""
 	}
 	text, err := elem.Text()
@@ -95,10 +110,10 @@ func findTextByXPath(wd selenium.WebDriver, xpath string) string {
 }
 
 func findAttrByXPath(wd selenium.WebDriver, xpath, attr string) string {
-	log.Printf("🔍 Finding attribute by XPath: %s", xpath)
+
 	elem, err := wd.FindElement(selenium.ByXPATH, xpath)
 	if err != nil {
-		log.Printf("❌ Failed to find element: %v", err)
+		log.Printf("❌ Error: Failed to find element: %v", err)
 		return ""
 	}
 	val, err := elem.GetAttribute(attr)
@@ -128,32 +143,60 @@ func ScrapeTweet(wd selenium.WebDriver, url string) (*TweetData, error) {
 	title, _ := wd.Title()
 	log.Printf("📄 Title: %s", title)
 
-	time.Sleep(10 * time.Second) // JS 로딩 대기
+	// 페이지 로딩 대기
+	for i := 0; i < 20; i++ {
+		_, err := wd.FindElement(selenium.ByCSSSelector, "article")
+		if err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 
 	// 웹페이지 로딩 상태 확인
 	_, err = wd.FindElement(selenium.ByCSSSelector, "article")
 	if err != nil {
-		log.Println("❌ <article> 태그를 못 찾았어. 아마 트윗이 안 보이거나 리디렉션된 듯?")
+		log.Println("❌ Error: <article> 태그를 못 찾았어요. 아마 트윗이 안 보이거나 리디렉션 된 것 같아요. 페이지 소스를 저장할게요.")
+
+		// 페이지 소스 가져오기 및 파일 저장
+		source, err := wd.PageSource()
+		if err != nil {
+			log.Printf("페이지 소스 가져오기 실패: %v", err)
+		} else {
+			err = os.WriteFile("page.html", []byte(source), 0644)
+			if err != nil {
+				log.Printf("파일 저장 실패: %v", err)
+			} else {
+				log.Println("페이지 소스가 'page.html' 파일로 저장되었습니다. docker 환경인 경우 ./app/page.html 파일을 확인하세요.")
+			}
+		}
+		return nil, fmt.Errorf("failed to find <article> element: %w", err)
 	}
 	currentURL, _ := wd.CurrentURL()
 	log.Printf("🌐 현재 URL: %s\n", currentURL)
 
 	// === Username ===
-	username := findTextByXPath(wd, `/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[2]/div/div/div[1]/div/div/div[2]/div/div/a/div/span`)
+	log.Printf("🔍 Finding username...")
+	username := findTextByXPath(wd, `//article//a[starts-with(@href, "/") and contains(., "@")]`)
 	log.Printf("👤 Username: %s", username)
 	// === Nickname ===
-	nickname := findTextByXPath(wd, `/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[2]/div/div/div[1]/div/div/div[1]/div/a/div/div[1]/span/span`)
-
+	log.Printf("🔍 Finding nickname...")
+	nickname := findTextByXPath(wd, `//article//div[@dir="ltr"]//span/span`)
+	log.Printf("👤 Nickname: %s", nickname)
 	// === Profile Image ===
+	log.Printf("🔍 Finding profile image...")
 	profileImg := findAttrByXPath(wd, `/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/section/div/div/div[1]/div/div/article/div/div/div[2]/div[1]/div[1]/div/div/div/div[2]/div/div[2]/div/a/div[3]/div/div[2]/div/img`, "src")
-
+	log.Printf("👤 Profile Image: %s", profileImg)
 	// === Meta Tag ===
+	log.Printf("🔍 Finding meta tag...")
 	metaTag := findAttrByXPath(wd, `//meta[@property='og:title']`, "content")
-
+	log.Printf("🏷 Meta Tag: %s", strings.ReplaceAll(metaTag, "\n", " "))
 	// === Tweet Text ===
+	log.Printf("🔍 Finding tweet text...")
 	text := findTextByXPath(wd, `/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/section/div/div/div[1]/div/div/article/div/div/div[3]/div[1]/div/div`)
+	log.Printf("📝 Tweet Text: %s", strings.ReplaceAll(text, "\n", " "))
 
 	// === Images (all) ===
+	log.Printf("🔍 Finding images...")
 	var images []string
 	imgElements, _ := wd.FindElements(selenium.ByXPATH, `//img[contains(@src, 'https://pbs.twimg.com/media')]`)
 	for _, img := range imgElements {
@@ -162,6 +205,7 @@ func ScrapeTweet(wd selenium.WebDriver, url string) (*TweetData, error) {
 	}
 
 	// === All links in tweet ===
+	log.Printf("🔍 Finding links...")
 	linkElems, err := wd.FindElements(selenium.ByXPATH, `//article//a`)
 	var links []string
 
@@ -187,6 +231,10 @@ func ScrapeTweet(wd selenium.WebDriver, url string) (*TweetData, error) {
 			}
 		}
 	}
+
+	log.Printf("🖼 Images: %v", images)
+	log.Printf("🔗 Links: %v", links)
+	log.Printf("✅ 크롤링 완료: %s", url)
 
 	return &TweetData{
 		Text:           text,

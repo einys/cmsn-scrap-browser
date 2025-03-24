@@ -1,6 +1,8 @@
 
 # Twitter Scraper
 
+# 24.03.2025 - depreciated. Use .go module instead.
+
 A simple tool to scrape tweet data using a provided Twitter URL.
 
 ## Table of Contents
