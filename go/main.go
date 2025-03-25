@@ -137,6 +137,7 @@ func TweetScrapeHandler(w http.ResponseWriter, r *http.Request) {
 
 // MetaHandler는 /meta?url= 경로에서 메타 태그 스크래핑을 수행합니다.
 func MetaHandler(w http.ResponseWriter, r *http.Request) {
+
 	pageURL := r.URL.Query().Get("url")
 	if pageURL == "" {
 		http.Error(w, "Missing 'url' query parameter", http.StatusBadRequest)
@@ -326,6 +327,7 @@ func waitForPageLoad(wd selenium.WebDriver, timeoutSeconds int) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
+
 }
 
 // metaScrape는 HTTP 핸들러 함수로, URL 파라미터에서 대상 페이지의 URL을 받아 해당 페이지의 메타데이터(og:title, og:image, og:description)를 스크랩합니다.
@@ -353,9 +355,9 @@ func ScrapeMeta(wd selenium.WebDriver, pageURL string) (interface{}, error) {
 	log.Printf("✅ 페이지 로딩 완료. 걸린 시간: %v", time.Since(startTime))
 
 	// og:title 추출 (우선, 없으면 <title> 태그로 대체)
-	titleElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:title"]`)
-	if err != nil {
-		titleElem, err = wd.FindElement(selenium.ByXPATH, `//head/title`)
+	// page source 가 notion인 경우 title 태그를 우선함
+	if strings.Contains(pageURL, "notion.so") {
+		titleElem, err := wd.FindElement(selenium.ByXPATH, `//title`)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find title element: %v", err)
 		}
@@ -364,9 +366,21 @@ func ScrapeMeta(wd selenium.WebDriver, pageURL string) (interface{}, error) {
 			metaData["title"] = ""
 		}
 	} else {
-		metaData["title"], err = titleElem.GetAttribute("content")
+		titleElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:title"]`)
 		if err != nil {
-			metaData["title"] = ""
+			titleElem, err = wd.FindElement(selenium.ByXPATH, `//head/title`)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find title element: %v", err)
+			}
+			metaData["title"], err = titleElem.Text()
+			if err != nil {
+				metaData["title"] = ""
+			}
+		} else {
+			metaData["title"], err = titleElem.GetAttribute("content")
+			if err != nil {
+				metaData["title"] = ""
+			}
 		}
 	}
 
@@ -377,14 +391,19 @@ func ScrapeMeta(wd selenium.WebDriver, pageURL string) (interface{}, error) {
 	if err != nil {
 		imageElem, err = wd.FindElement(selenium.ByXPATH, `//meta[@name="image"]`)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find image element: %v", err)
+			log.Printf("Warning: Failed to find image element: %v", err)
+			metaData["img"] = ""
+			return metaData, nil // Return early if no image element is found
 		}
 	}
-	metaData["img"], err = imageElem.GetAttribute("content")
-	if err != nil {
+	if imageElem != nil {
+		metaData["img"], err = imageElem.GetAttribute("content")
+		if err != nil {
+			metaData["img"] = ""
+		}
+	} else {
 		metaData["img"] = ""
 	}
-
 	log.Printf("🖼 Image: %s", metaData["img"])
 
 	// og:description 추출 (우선, 없으면 meta[name="description"]로 대체)
@@ -392,14 +411,19 @@ func ScrapeMeta(wd selenium.WebDriver, pageURL string) (interface{}, error) {
 	if err != nil {
 		descElem, err = wd.FindElement(selenium.ByCSSSelector, `meta[name="description"]`)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find description element: %v", err)
+			log.Printf("Warning: Failed to find description element: %v", err)
+			metaData["description"] = ""
+			return metaData, nil // Return early if no description element is found
 		}
 	}
-	metaData["description"], err = descElem.GetAttribute("content")
-	if err != nil {
+	if descElem != nil {
+		metaData["description"], err = descElem.GetAttribute("content")
+		if err != nil {
+			metaData["description"] = ""
+		}
+	} else {
 		metaData["description"] = ""
 	}
-
 	log.Printf("📝 Description: %s", metaData["description"])
 
 	// 크롤링 완료. 걸린 시간 출력
