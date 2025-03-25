@@ -9,7 +9,7 @@
 "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
 ```
 이 옵션을 써야 됨. 아니면 트위터가 차단함. 또는, headless 주석처리하고 렌더링을 하면 됨.
-
+잘 안되면 app/page.html 보면 로딩된 페이지에 대한 자료 있으니까 보고 뭐가 로딩안됐는지 확인하기.
 
 ## /scrape-twitter
 ```
