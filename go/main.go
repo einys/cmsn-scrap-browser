@@ -84,8 +84,8 @@ func main() {
 
 	http.HandleFunc("/scrape-twitter", TweetScrapeHandler)
 	http.HandleFunc("/meta", MetaHandler)
-	fmt.Println("🚀 Server running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	fmt.Println("🚀 Server running on http://localhost:18081")
+	log.Fatal(http.ListenAndServe(":18081", nil))
 }
 
 func TweetScrapeHandler(w http.ResponseWriter, r *http.Request) {
