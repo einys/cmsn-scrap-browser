@@ -14,17 +14,20 @@ import (
 
 	"github.com/tebeka/selenium"
 	"github.com/tebeka/selenium/chrome"
+
+	"github.com/einys/cmsn-scraper/lib"
 )
 
 var (
 	// chromedriver 위치
 	chromeDriverPath = "/usr/bin/chromedriver"
 	port             = 9515
+	myOS             = runtime.GOOS // 현재 OS를 가져옵니다. 예: "darwin", "linux", "windows"
 )
 
 func init() {
 	// macOS 환경(테스트 환경)인 경우 path를 /opt/homebrew/bin/chromedriver 로 설정
-	if runtime.GOOS == "darwin" {
+	if myOS == "darwin" {
 		log.Println("🍏 macOS detected. Setting chromedriver path to /opt/homebrew/bin/chromedriver")
 		chromeDriverPath = "/opt/homebrew/bin/chromedriver"
 	} else {
@@ -36,21 +39,40 @@ func init() {
 func initWebDriver() (selenium.WebDriver, func(), error) {
 	// Chrome 옵션 설정
 	caps := selenium.Capabilities{"browserName": "chrome"}
-	chromeCaps := chrome.Capabilities{
-		Args: []string{
-			"--headless=new",
-			"--disable-gpu",
-			"--no-sandbox",
+	var chromeArgs []string
+	if myOS == "darwin" {
+		chromeArgs = []string{
 			"--window-size=1280,1024",
 			"--disable-dev-shm-usage",
 			"--lang=ko-KR,ko",
 			"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-		},
+		}
+	} else {
+		log.Println("🐧 헤드리스 모드로 Chrome을 실행합니다.")
+		chromeArgs = []string{
+			"--headless",
+			"--disable-gpu",
+			"--no-sandbox",
+			"--window-size=1280,1024",
+			"--disable-dev-shm-usage",
+			"--remote-debugging-pipe",
+			"--lang=ko-KR,ko",
+			"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+		}
+	}
+	chromeCaps := chrome.Capabilities{
+		Path: "/usr/bin/chromium", // 명시적으로 바이너리 경로 지정
+		Args: chromeArgs,
 	}
 	caps.AddChrome(chromeCaps)
 
-	// ChromeDriver 서비스 시작
-	service, err := selenium.NewChromeDriverService(chromeDriverPath, port)
+	// ChromeDriver 서비스 시작 (디버깅을 위한 로그 파일 옵션 추가)
+	logFile, _ := os.Create("/tmp/chromedriver.log")
+	service, err := selenium.NewChromeDriverService(
+		chromeDriverPath,
+		port,
+		selenium.Output(logFile),
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to start ChromeDriver: %v", err)
 	}
@@ -95,32 +117,13 @@ func TweetScrapeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Chrome options
-	caps := selenium.Capabilities{"browserName": "chrome"}
-	caps.AddChrome(chrome.Capabilities{Args: []string{
-		"--headless=new",
-		"--disable-gpu",
-		"--no-sandbox",
-		"--window-size=1280,1024",
-		"--disable-dev-shm-usage", // 추가된 플래그
-		"--lang=ko-KR,ko",
-		"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-	}})
-
-	// Start chromedriver
-	service, err := selenium.NewChromeDriverService(chromeDriverPath, port)
+	// WebDriver 초기화
+	wd, quitFunc, err := initWebDriver()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to start ChromeDriver: %v", err), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer service.Stop()
-
-	// Connect to WebDriver
-	wd, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to connect to WebDriver: %v", err), http.StatusInternalServerError)
-		return
-	}
+	defer quitFunc()
 	defer wd.Quit()
 
 	// Scrape tweet
@@ -144,6 +147,7 @@ func MetaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// WebDriver 초기화
 	wd, quitFunc, err := initWebDriver()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -152,6 +156,7 @@ func MetaHandler(w http.ResponseWriter, r *http.Request) {
 	defer quitFunc()
 	defer wd.Quit()
 
+	// Scrape meta
 	metaData, err := ScrapeMeta(wd, pageURL)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to scrape meta: %v", err), http.StatusInternalServerError)
@@ -356,15 +361,29 @@ func ScrapeMeta(wd selenium.WebDriver, pageURL string) (interface{}, error) {
 
 	// og:title 추출 (우선, 없으면 <title> 태그로 대체)
 	// page source 가 notion인 경우 title 태그를 우선함
-	if strings.Contains(pageURL, "notion.so") {
-		titleElem, err := wd.FindElement(selenium.ByXPATH, `//title`)
+	if strings.Contains(pageURL, ".notion.") {
+
+		/**
+		* Notion 페이지의 경우, og:title이 없을 수 있음.
+		* 이 경우, 페이지 내용을 렌더링한 후 title을 추출하는 방식으로 대체
+		 */
+		log.Printf("🔍 Finding 'notion' title...")
+
+		// Wait until content is rendered
+		wd.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+			script := `return document.querySelector(".notion-page-content")?.innerText;`
+			text, err := wd.ExecuteScript(script, nil)
+			return text != nil && text.(string) != "", err
+		}, 10*time.Second)
+
+		// JS로 타이틀 가져오기
+		titleJS, err := wd.ExecuteScript("return document.title;", nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find title element: %v", err)
+			log.Fatal(err)
 		}
-		metaData["title"], err = titleElem.Text()
-		if err != nil {
-			metaData["title"] = ""
-		}
+		fmt.Println("🏷 Notion title via JS:", titleJS)
+		metaData["title"] = titleJS.(string)
+
 	} else {
 		titleElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:title"]`)
 		if err != nil {
@@ -382,9 +401,8 @@ func ScrapeMeta(wd selenium.WebDriver, pageURL string) (interface{}, error) {
 				metaData["title"] = ""
 			}
 		}
+		log.Printf("🏷 Title: %s", metaData["title"])
 	}
-
-	log.Printf("🏷 Title: %s", metaData["title"])
 
 	// og:image 추출 (우선, 없으면 meta[name="image"]로 대체)
 	imageElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:image"]`)
@@ -407,24 +425,55 @@ func ScrapeMeta(wd selenium.WebDriver, pageURL string) (interface{}, error) {
 	log.Printf("🖼 Image: %s", metaData["img"])
 
 	// og:description 추출 (우선, 없으면 meta[name="description"]로 대체)
-	descElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:description"]`)
-	if err != nil {
-		descElem, err = wd.FindElement(selenium.ByCSSSelector, `meta[name="description"]`)
+
+	// notion 인 경우, description이 없을 수 있음
+	if strings.Contains(pageURL, ".notion.") {
+		log.Printf("🔍 Finding 'notion' description...")
+
+		// Wait until content is rendered
+		wd.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+			script := `return document.querySelector(".notion-page-content")?.innerText;`
+			text, err := wd.ExecuteScript(script, nil)
+			return text != nil && text.(string) != "", err
+		}, 10*time.Second)
+
+		// JS로 설명 가져오기 (처음 200글자)
+		descJS, err := wd.ExecuteScript(`return document.querySelector(".notion-page-content")?.innerText.slice(0, 200);`, nil)
 		if err != nil {
-			log.Printf("Warning: Failed to find description element: %v", err)
-			metaData["description"] = ""
-			return metaData, nil // Return early if no description element is found
+			log.Fatal(err)
 		}
-	}
-	if descElem != nil {
-		metaData["description"], err = descElem.GetAttribute("content")
-		if err != nil {
-			metaData["description"] = ""
+
+		// 문자열 특수문자 정리
+		descJS = lib.CleanText(descJS.(string))
+
+		// 200글자 이상이면 ... 으로 대체
+		if len(descJS.(string)) >= 200 {
+			descJS = descJS.(string)[:200] + "..."
 		}
+		fmt.Println("📝 Notion description via JS:", descJS)
+		metaData["description"] = descJS.(string)
+
 	} else {
-		metaData["description"] = ""
+
+		descElem, err := wd.FindElement(selenium.ByXPATH, `//meta[@property="og:description"]`)
+		if err != nil {
+			descElem, err = wd.FindElement(selenium.ByCSSSelector, `meta[name="description"]`)
+			if err != nil {
+				log.Printf("Warning: Failed to find description element: %v", err)
+				metaData["description"] = ""
+				return metaData, nil // Return early if no description element is found
+			}
+		}
+		if descElem != nil {
+			metaData["description"], err = descElem.GetAttribute("content")
+			if err != nil {
+				metaData["description"] = ""
+			}
+		} else {
+			metaData["description"] = ""
+		}
+		log.Printf("📝 Description: %s", metaData["description"])
 	}
-	log.Printf("📝 Description: %s", metaData["description"])
 
 	// 크롤링 완료. 걸린 시간 출력
 	log.Printf("✅ 크롤링 완료: %s  걸린 시간: %v", pageURL, time.Since(startTime))

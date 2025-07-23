@@ -30,7 +30,7 @@ func TestScrapeTwitterAPI(t *testing.T) {
 }
 
 func TestScrapeMetaApi(t *testing.T) {
-	req := httptest.NewRequest("GET", "/meta?url=https://open.kakao.com/o/slElzCnh", nil)
+	req := httptest.NewRequest("GET", "/meta?url=https://grand-mistake-cc4.notion.site/1bd539ffbe2b80849b14c504a7509543", nil)
 	w := httptest.NewRecorder()
 
 	MetaHandler(w, req)
