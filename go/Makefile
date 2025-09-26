@@ -42,7 +42,7 @@ show-commit-list: ## Show pretty commit list.
 	@git log --pretty=format:"%h - %an, %ar : %s"
 
 login: ## ECR login.
-	@rm ~/.docker/config.json && aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 412530390400.dkr.ecr.ap-northeast-2.amazonaws.com
+	@rm -f ~/.docker/config.json && aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 412530390400.dkr.ecr.ap-northeast-2.amazonaws.com
 
 login-public: ## ECR login.
 	@aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/v0z0y2u1
