@@ -16,6 +16,10 @@
 curl "http://localhost:18081/scrape-twitter?url=https://x.com/naeng2_/status/1903488320367403357"
 ```
 
+```
+curl "http://13.209.246.170:18081/scrape-twitter?url=https://x.com/naeng2_/status/1903488320367403357"
+```
+
 결과
 ```
 {"text":"상시 흑백 그림커미션을 개장했습니다~\nhttps://kre.pe/V5LG\n자세한 사항 크레페 링크를 확인 부탁드립니다.","images":["https://pbs.twimg.com/media/GmqMNf0bYAAUnTD?format=png\u0026name=small","https://pbs.twimg.com/media/GmqMh1maAAAdIXL?format=png\u0026name=360x360"],"username":"@naeng2_","user_nickname":"냉이","user_profile_img":"https://pbs.twimg.com/profile_images/1843649710072225792/PyeAorAY_normal.jpg","meta_tag":"냉이 on X: \"상시 흑백 그림커미션을 개장했습니다~\nhttps://t.co/Bcu5BZZLkH\n자세한 사항은 크레페 링크를 확인 부탁드립니다. https://t.co/iFdaKGuPnH\" / X","links":["https://kre.pe/V5LG"]}
@@ -24,6 +28,10 @@ curl "http://localhost:18081/scrape-twitter?url=https://x.com/naeng2_/status/190
 ## /meta
 ```
 curl "http://localhost:8080/meta?url=https://www.naver.com"
+```
+
+```
+curl "http://13.209.246.170:18081/meta?url=https://www.naver.com"
 ```
 
 ```
