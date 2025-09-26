@@ -1,0 +1,24 @@
+version: "3"
+services:
+  browser:
+    image: public.ecr.aws/v0z0y2u1/cmsn-scrap-browser:latest
+    ports:
+      - "4444:4444"
+      - "5900:5900"
+      - "7900:7900"
+      - "9222:9222"
+      - "9223:9223"
+      - "9224:9224"
+      - "9225:9225"
+      - "18081:18081"
+    volumes:
+      - ./app:/app
+    deploy:
+      restart_policy:
+        condition: on-failure # 컨테이너가 어떤 이유로든 종료되었을 때 재시작
+        delay: 15s # 재시작하기 전에 15초 대기
+    logging:
+      driver: "json-file" # 기본 드라이버. 컨테이너 로그를 JSON 파일로 /var/lib/docker/containers/<container-id>/<container-id>-json.log 에 저장.
+      options:
+        max-size: "10m" # 로그 파일 하나당 최대 크기
+        max-file: "5" # 로테이션 개수 (5개까지 유지)

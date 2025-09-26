@@ -67,5 +67,8 @@ all: checkdiff login-public build-public push-public ## All publish process.
 
 all-local: checkdiff build push ## All publish process.
 
-run: ## Run the container.
-	@docker run -it --rm -p 18081:18081 ${IMG}
+browser: ## Deploy the browser stack and show logs.
+	@sh browser.sh
+
+rm-browser: ## Remove the browser stack.
+	@docker stack rm browser
