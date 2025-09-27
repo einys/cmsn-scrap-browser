@@ -1,3 +1,7 @@
+# 진입점
+server/main.go
+makefile 의 run으로 실행
+
 # headless chrome twitter scraper
 
 ```

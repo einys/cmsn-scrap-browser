@@ -21,6 +21,7 @@ import (
 var (
 	// chromedriver 위치
 	chromeDriverPath = "/usr/bin/chromedriver"
+	chromiumPath     = "/usr/bin/chromium"
 	port             = 9515
 	myOS             = runtime.GOOS // 현재 OS를 가져옵니다. 예: "darwin", "linux", "windows"
 )
@@ -30,6 +31,8 @@ func init() {
 	if myOS == "darwin" {
 		log.Println("🍏 macOS detected. Setting chromedriver path to /opt/homebrew/bin/chromedriver")
 		chromeDriverPath = "/opt/homebrew/bin/chromedriver"
+		chromiumPath = "/opt/homebrew/bin/chromium"
+
 	} else {
 		log.Println("🐧 Linux detected. Using default chromedriver path.")
 	}
@@ -61,7 +64,7 @@ func initWebDriver() (selenium.WebDriver, func(), error) {
 		}
 	}
 	chromeCaps := chrome.Capabilities{
-		Path: "/usr/bin/chromium", // 명시적으로 바이너리 경로 지정
+		Path: chromiumPath, // 명시적으로 바이너리 경로 지정
 		Args: chromeArgs,
 	}
 	caps.AddChrome(chromeCaps)

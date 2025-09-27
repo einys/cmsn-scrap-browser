@@ -67,6 +67,13 @@ all: checkdiff login-public build-public push-public ## All publish process.
 
 all-local: checkdiff build push ## All publish process.
 
+
+run:
+	go run ./cmd/server
+
+run-dp:
+	SCRAPER_ENGINE=chromedp go run ./cmd/server
+
 browser: ## Deploy the browser stack and show logs.
 	@sh browser.sh
 
