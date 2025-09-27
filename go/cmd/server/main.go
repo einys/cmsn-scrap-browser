@@ -13,16 +13,19 @@ import (
 )
 
 var (
-	ENGINE = "selenium" // 기본값
+	ENGINE = "chromedp" // 기본값
 )
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	http.HandleFunc("/scrape-twitter", tweetHandler)
-	http.HandleFunc("/meta", metaHandler)
+
+	// 환경변수로 엔진 설정
 	ENGINE = os.Getenv("SCRAPER_ENGINE")
 	log.Println("🛠️  Using SCRAPER_ENGINE:", ENGINE)
 
+	// 서버 시작
+	http.HandleFunc("/scrape-twitter", tweetHandler)
+	http.HandleFunc("/meta", metaHandler)
 	log.Println("🚀 Server running on http://localhost:18081")
 	log.Fatal(http.ListenAndServe(":18081", nil))
 

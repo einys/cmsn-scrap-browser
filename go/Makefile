@@ -69,9 +69,9 @@ all-local: checkdiff build push ## All publish process.
 
 
 run:
-	go run ./cmd/server
+	SCRAPER_ENGINE=selenium go run ./cmd/server
 
-run-dp:
+dev:
 	SCRAPER_ENGINE=chromedp go run ./cmd/server
 
 browser: ## Deploy the browser stack and show logs.

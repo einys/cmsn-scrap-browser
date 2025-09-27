@@ -1,8 +1,9 @@
 # ───────────────────────────────────────────────────────────────
 # Stage 1: Build Go binary
 # ───────────────────────────────────────────────────────────────
-FROM golang:1.23-bullseye AS builder
+FROM golang:1.24-bullseye AS builder
 
+# 작업 디렉토리 설정 및 의존성 설치
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -10,7 +11,7 @@ RUN go mod download
 COPY . .
 # 정적 링크 빌드 (CGO_DISABLED)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
-    go build -ldflags="-s -w" -o server .
+    go build -ldflags="-s -w" -o server ./cmd/server
 
 
 
