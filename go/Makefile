@@ -63,9 +63,7 @@ push-public: ## Push docker image to ecr repo.
 	@docker push ${PUBLIC_NAME}:${TAG}
 	@docker push ${PUBLIC_NAME}:latest
 
-all: checkdiff login-public build-public push-public ## All publish process.
-
-all-local: checkdiff build push ## All publish process.
+all: login checkdiff build push ## All publish process.
 
 
 run:
